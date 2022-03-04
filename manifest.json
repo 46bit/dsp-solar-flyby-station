@@ -1,12 +1,11 @@
 ﻿{
-    "name": "FactorySpaceStation",
-    "version_number": "0.0.2",
-    "website_url": "https://github.com/46bit/dsp-factory-space-stations",
-    "description": "Save your endgame UPS by building factories on space stations",
+    "name": "Sail Flyby",
+    "version_number": "0.0.1",
+    "website_url": "https://github.com/46bit/dsp-sail-flyby",
+    "description": "Deploy solar sails behind logistics vessels",
     "dependencies": [
         "xiaoye97-BepInEx-5.4.11",
         "xiaoye97-LDBTool-2.0.2",
-        "CommonAPI-CommonAPI-1.3.0",
-        "kremnev8-GigaStationsUpdated-2.2.7"
+        "CommonAPI-CommonAPI-1.3.0"
     ]
 }
