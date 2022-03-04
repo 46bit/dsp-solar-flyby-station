@@ -22,8 +22,8 @@ namespace DSPSailFlyby
 
     public class SailFlybyShipData {
         public ShipData inner;
-        ShipRenderingData renderingData;
-        ShipUIRenderingData uiRenderingData;
+        public ShipRenderingData renderingData;
+        public ShipUIRenderingData uiRenderingData;
 
         public int orbitId;
         public EFlybyStage stage;
@@ -110,6 +110,7 @@ namespace DSPSailFlyby
             base.InternalUpdate(power, factory);
 
             ship.inner.uPos += (VectorLF3)ship.inner.uVel;
+            float tripLength = 1000;
 
             switch (ship.stage)
             {
@@ -125,13 +126,13 @@ namespace DSPSailFlyby
                     //ship.inner.uVel = (factory.planet.star.uPosition - ship.inner.uPos).normalized * moveSpeed;
                     break;
                 case EFlybyStage.EnRoute:
-                    UpdateEnRouteShip(factory);
+                    UpdateEnRouteShip(factory, ref tripLength);
                     break;
                 case EFlybyStage.Flyby:
-                    UpdateFlybyShip(factory);
+                    UpdateFlybyShip(factory, ref tripLength);
                     break;
                 case EFlybyStage.Returning:
-                    UpdateReturningShip(factory);
+                    UpdateReturningShip(factory, ref tripLength);
                     break;
                 case EFlybyStage.Landing:
                     ship.stage = EFlybyStage.Cooldown;
@@ -140,6 +141,37 @@ namespace DSPSailFlyby
                     ship.stage = EFlybyStage.Idle;
                     break;
             }
+
+            // FIXME: Dig into rotations and positioning. It's all a bit weird from my
+            // perspective, and so rotation during orbit is completely broken.
+            VectorLF3 relativePos = factory.transport.gameData.relativePos;
+            Quaternion relativeRot = factory.transport.gameData.relativeRot;
+            ship.renderingData.SetPose(
+                ship.inner.uPos,
+                ship.inner.uRot,
+                relativePos,
+                relativeRot,
+                ship.inner.uVel,
+                1501
+            );
+            ship.renderingData.gid = 1;
+            ship.renderingData.anim = Vector3.zero;
+            // FIXME: Figure out full effects of anim.z
+            // It seems to need to be >=1 in order for the payload markers to appear
+            // Can this also control the trail 'flames' visible when ships zoom away from
+            // planets?
+            ship.renderingData.anim.z = 1.5f; // 0.7f; // 1;
+
+            ship.uiRenderingData.SetPose(
+                ship.inner.uPos,
+                ship.inner.uRot,
+                tripLength,
+                ship.inner.uVel.magnitude,
+                1501
+            );
+            ship.uiRenderingData.gid = 1;
+            VectorLF3 viewTargetUPos = UIRoot.instance.uiGame.starmap.viewTargetUPos;
+            ship.uiRenderingData.rpos = (ship.uiRenderingData.upos - viewTargetUPos) * 0.00025;
 
             return 0;
         }
@@ -159,7 +191,7 @@ namespace DSPSailFlyby
             }
         }
 
-        protected void UpdateEnRouteShip(PlanetFactory factory)
+        protected void UpdateEnRouteShip(PlanetFactory factory, ref float tripLength)
         {
             StarData star = factory.planet.star;
             DysonSwarm swarm = factory.dysonSphere.swarm;
@@ -182,7 +214,7 @@ namespace DSPSailFlyby
             //}
         }
 
-        protected void UpdateFlybyShip(PlanetFactory factory)
+        protected void UpdateFlybyShip(PlanetFactory factory, ref float tripLength)
         {
             int solarSailLife = (int)(GameMain.history.solarSailLife * 60f + 0.1f);
             long expiryTime = GameMain.gameTick + (long)solarSailLife;
@@ -191,21 +223,24 @@ namespace DSPSailFlyby
             DysonSwarm swarm = factory.dysonSphere.swarm;
             SailOrbit orbit = swarm.orbits[1];
 
-            ship.orbitAngle -= 360.0 / 1000;
+            ship.orbitAngle -= 360.0 / 2000;
             VectorLF3 newShipPos = Maths.QRotateLF(orbit.rotation, new VectorLF3(
                 Math.Sin(ship.orbitAngle * 0.017453292) * orbit.radius,
                 0,
                 Math.Cos(ship.orbitAngle * 0.017453292) * orbit.radius
             )) + star.uPosition;
-            ship.inner.uRot.SetFromToRotation(ship.inner.uPos, newShipPos);
+            ship.inner.uVel = newShipPos - ship.inner.uPos;
+            ship.inner.uRot.SetFromToRotation(Vector3.forward, ship.inner.uVel);
             ship.inner.uPos = newShipPos;
+
+            tripLength = (float) 6.14 * orbit.radius;
 
             // Drop sails randomly, on average every third game update
             // Would be nicer to drop sails in even pattern, but it made the lack of alignment
             // obvious. Need to rotate a bit more than 360 degrees, because the first sails
             // move on. Use orbital period to figure out how much further to go, how often to
             // drop sail, etc.
-            if (RandomTable.Integer(ref swarm.randSeed, 3) == 2)
+            if (RandomTable.Integer(ref swarm.randSeed, 6) == 5)
             {
                 VectorLF3 vel = VectorLF3.Cross(ship.inner.uPos, orbit.up).normalized;
                 vel *= Math.Sqrt(factory.dysonSphere.gravity / orbit.radius);
@@ -234,15 +269,17 @@ namespace DSPSailFlyby
             }
         }
 
-        protected void UpdateReturningShip(PlanetFactory factory)
+        protected void UpdateReturningShip(PlanetFactory factory, ref float tripLength)
         {
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
 
             VectorLF3 currentTargetPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
+            ship.inner.uRot.SetFromToRotation(Vector3.forward, currentTargetPos - ship.inner.uPos);
             ship.inner.uVel = (currentTargetPos - ship.inner.uPos).normalized * moveSpeed;
-
-            if (ship.inner.uPos.Distance(currentTargetPos) < moveSpeed * 1.5)
+            double remainingDist = ship.inner.uPos.Distance(currentTargetPos);
+            tripLength = (float)remainingDist;
+            if (remainingDist < moveSpeed * 1.5)
             {
                 ship.stage = EFlybyStage.Landing;
                 ship.inner.uPos = currentTargetPos;

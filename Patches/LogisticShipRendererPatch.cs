@@ -29,18 +29,7 @@ namespace DSPSailFlyby
                     __instance.Expand2x();
                 }
 
-                ShipRenderingData shipRenderingData = new();
-                shipRenderingData.SetPose(
-                    sailStation.ship.inner.uPos,
-                    sailStation.ship.inner.uRot,
-                    relativePos,
-                    relativeRot,
-                    sailStation.ship.inner.uVel,
-                    0
-                );
-                shipRenderingData.gid = 1;
-                shipRenderingData.anim = Vector3.zero;
-                __instance.shipsArr[__instance.shipCount] = shipRenderingData;
+                __instance.shipsArr[__instance.shipCount] = sailStation.ship.renderingData;
                 __instance.shipCount++;
             }
 
@@ -87,20 +76,7 @@ namespace DSPSailFlyby
                     __instance.Expand2x();
                 }
 
-                ShipUIRenderingData shipUIRenderingData = new();
-                shipUIRenderingData.SetPose(
-                    sailStation.ship.inner.uPos,
-                    sailStation.ship.inner.uRot,
-                    1000,
-                    0,
-                    0
-                );
-                shipUIRenderingData.gid = 1;
-
-                VectorLF3 viewTargetUPos = __instance.uiStarmap.viewTargetUPos;
-                shipUIRenderingData.rpos = (shipUIRenderingData.upos - viewTargetUPos) * 0.00025;
-
-                __instance.shipsArr[__instance.shipCount] = shipUIRenderingData;
+                __instance.shipsArr[__instance.shipCount] = sailStation.ship.uiRenderingData;
                 __instance.shipCount++;
             }
 
