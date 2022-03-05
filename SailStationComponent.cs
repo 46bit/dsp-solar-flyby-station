@@ -109,6 +109,9 @@ namespace DSPSailFlyby
         {
             base.InternalUpdate(power, factory);
 
+            EntityData entity = factory.entityPool[entityId];
+            AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
+
             ship.inner.uPos += (VectorLF3)ship.inner.uVel;
             float tripLength = 1000;
 
@@ -118,12 +121,63 @@ namespace DSPSailFlyby
                     UpdateIdleShip(factory);
                     break;
                 case EFlybyStage.Warmup:
-                    ship.stage = EFlybyStage.Takeoff;
+                    ship.inner.t += 0.03335f;
+                    if (ship.inner.t > 1f)
+                    {
+                        ship.inner.t = 0f;
+                        ship.stage = EFlybyStage.Takeoff;
+                    }
+                    ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, entity.pos);
+                    ship.inner.uVel.x = 0f;
+                    ship.inner.uVel.y = 0f;
+                    ship.inner.uVel.z = 0f;
+                    ship.inner.uSpeed = 0f;
+                    ship.inner.uRot = astroPose.uRot * entity.rot;
+                    ship.inner.uAngularVel.x = 0f;
+                    ship.inner.uAngularVel.y = 0f;
+                    ship.inner.uAngularVel.z = 0f;
+                    ship.inner.uAngularSpeed = 0f;
+                    ship.inner.pPosTemp = Vector3.zero;
+                    ship.inner.pRotTemp = Quaternion.identity;
+                    ship.renderingData.anim.z = 0f;
                     break;
                 case EFlybyStage.Takeoff:
-                    ship.stage = EFlybyStage.EnRoute;
                     //// FIXME: Take into account the orbit radius AND update the rotation
                     //ship.inner.uVel = (factory.planet.star.uPosition - ship.inner.uPos).normalized * moveSpeed;
+                    float shipSailSpeed = GameMain.data.history.logisticShipSailSpeedModified;
+                    float num46 = Mathf.Sqrt(shipSailSpeed / 600f);
+                    float num47 = num46;
+                    if (num47 > 1f)
+                    {
+                        num47 = Mathf.Log(num47) + 1f;
+                    }
+                    float num48 = shipSailSpeed * 0.03f * num47;
+                    float num49 = shipSailSpeed * 0.12f * num47;
+                    float num50 = shipSailSpeed * 0.4f * num46;
+                    float num51 = num46 * 0.006f + 1E-05f;
+
+                    ship.inner.t += num51;
+                    float num52 = ship.inner.t;
+                    if (ship.inner.t > 1f)
+                    {
+                        ship.inner.t = 1f;
+                        num52 = 1f;
+                        ship.stage = EFlybyStage.EnRoute;
+                    }
+                    // Could this be taking off code? Maybe ShipData.t is used to control the takeoff/arrival to take a fixed time
+                    ship.renderingData.anim.z = num52;
+                    num52 = (3f - num52 - num52) * num52 * num52;
+                    ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, entity.pos + entity.pos.normalized * (25f * num52));
+                    ship.inner.uRot = astroPose.uRot * entity.rot;
+                    // Stop accelerating in order to rely on the exact position code above
+                    ship.inner.uVel.x = 0f;
+                    ship.inner.uVel.y = 0f;
+                    ship.inner.uVel.z = 0f;
+                    ship.inner.uSpeed = 0f;
+                    ship.inner.uAngularVel.x = 0f;
+                    ship.inner.uAngularVel.y = 0f;
+                    ship.inner.uAngularVel.z = 0f;
+                    ship.inner.uAngularSpeed = 0f;
                     break;
                 case EFlybyStage.EnRoute:
                     UpdateEnRouteShip(factory, ref tripLength);
