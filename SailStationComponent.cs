@@ -159,7 +159,8 @@ namespace DSPSailFlyby
             // FIXME: Figure out full effects of anim.z
             // It seems to need to be >=1 in order for the payload markers to appear
             // Can this also control the trail 'flames' visible when ships zoom away from
-            // planets?
+            // planets? It's not controlled by velocity, because the flames still exist when
+            // ships are momentarily stationary before dropping onto home platforms.
             ship.renderingData.anim.z = 1.5f; // 0.7f; // 1;
 
             ship.uiRenderingData.SetPose(
