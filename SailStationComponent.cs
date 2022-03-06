@@ -71,8 +71,6 @@ namespace DSPSailFlyby
             }
         }
 
-        public static SailStationComponent instance;
-
         public int planetId;
         public VectorLF3 dockPosition;
         public SailFlybyShipData ship;
@@ -82,8 +80,6 @@ namespace DSPSailFlyby
             base.OnAdded(data, factory);
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
-
-            instance = this;
 
             planetId = factory.planetId;
 
@@ -157,13 +153,11 @@ namespace DSPSailFlyby
                 return 0;
             }
 
-            // FIXME: Dig into rotations and positioning. It's all a bit weird from my
-            // perspective, and so rotation during orbit is completely broken.
             VectorLF3 relativePos = factory.transport.gameData.relativePos;
             Quaternion relativeRot = factory.transport.gameData.relativeRot;
             ship.renderingData.SetPose(
                 ship.inner.uPos,
-                ship.inner.uRot, // FIXME: original code often uses another quaternion
+                ship.inner.uRot,
                 relativePos,
                 relativeRot,
                 ship.inner.uVel * ship.inner.uSpeed,
@@ -171,21 +165,13 @@ namespace DSPSailFlyby
             );
             ship.renderingData.gid = 1;
             ship.renderingData.anim = Vector3.zero;
-            // FIXME: Figure out full effects of anim.z
-            // It seems to need to be >=1 in order for the payload markers to appear
-            // Can this also control the trail 'flames' visible when ships zoom away from
-            // planets? It's not controlled by velocity, because the flames still exist when
-            // ships are momentarily stationary before dropping onto home platforms.
-            if (ship.stage != EFlybyStage.Idle)
-            {
-                ship.renderingData.anim.z = 1.5f;
-            }
+            ship.renderingData.anim.z = (ship.stage != EFlybyStage.Idle) ? 0f : 1.5f;
 
             ship.uiRenderingData.SetPose(
                 ship.inner.uPos,
-                ship.inner.uRot, // FIXME: original code often uses another quaternion
+                ship.inner.uRot,
                 tripLength,
-                ship.inner.uVel.magnitude + ship.inner.uSpeed, // FIXME: Only use one
+                ship.inner.uVel.magnitude + ship.inner.uSpeed,
                 1501
             );
             ship.uiRenderingData.gid = 1;
@@ -241,8 +227,6 @@ namespace DSPSailFlyby
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
 
-            //// FIXME: Take into account the orbit radius AND update the rotation
-            //ship.inner.uVel = (factory.planet.star.uPosition - ship.inner.uPos).normalized * moveSpeed;
             float shipSailSpeed = GameMain.data.history.logisticShipSailSpeedModified;
             float num46 = Mathf.Sqrt(shipSailSpeed / 600f);
             float num47 = num46;
@@ -263,12 +247,10 @@ namespace DSPSailFlyby
                 num52 = 1f;
                 ship.stage = EFlybyStage.EnRoute;
             }
-            // Could this be taking off code? Maybe ShipData.t is used to control the takeoff/arrival to take a fixed time
             ship.renderingData.anim.z = num52;
             num52 = (3f - num52 - num52) * num52 * num52;
             ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition + dockPosition.normalized * (25f * num52));
             ship.inner.uRot = astroPose.uRot * entity.rot;
-            // Stop accelerating in order to rely on the exact position code above
             ship.inner.uVel.x = 0f;
             ship.inner.uVel.y = 0f;
             ship.inner.uVel.z = 0f;
@@ -296,7 +278,7 @@ namespace DSPSailFlyby
             ship.inner.planetB = star.id;
             AstroPose astroPose2 = astroPoses[star.id];
             VectorLF3 positionB = astroPose2.uPos + Maths.QRotateLF(orbit.rotation, new VectorLF3(0, 0, orbit.radius));
-            Quaternion rotationB = Quaternion.identity; // FIXME: Bring in from UpdateFlybyShip?
+            Quaternion rotationB = Quaternion.identity;
 
             ship.inner.direction = 1;
 
@@ -377,7 +359,7 @@ namespace DSPSailFlyby
             ship.inner.planetB = star.id;
             AstroPose astroPose2 = astroPoses[star.id];
             VectorLF3 positionB = ship.inner.uPos;
-            Quaternion rotationB = ship.inner.uRot; // Quaternion.identity; // FIXME: Bring in from UpdateFlybyShip?
+            Quaternion rotationB = ship.inner.uRot;
 
             ship.inner.direction = -1;
 
@@ -393,8 +375,6 @@ namespace DSPSailFlyby
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
 
-            //// FIXME: Take into account the orbit radius AND update the rotation
-            //ship.inner.uVel = (factory.planet.star.uPosition - ship.inner.uPos).normalized * moveSpeed;
             float shipSailSpeed = GameMain.data.history.logisticShipSailSpeedModified;
             float num46 = Mathf.Sqrt(shipSailSpeed / 600f);
             float num47 = num46;
