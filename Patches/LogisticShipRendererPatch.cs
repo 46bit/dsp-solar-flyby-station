@@ -18,9 +18,7 @@ namespace DSPSailFlyby
         [HarmonyPatch(typeof(LogisticShipRenderer), "Update")]
         public static void UpdatePostfix(LogisticShipRenderer __instance)
         {
-            VectorLF3 relativePos = __instance.transport.gameData.relativePos;
-            Quaternion relativeRot = __instance.transport.gameData.relativeRot;
-
+            // FIXME: SUPPORT MULTIPLE SailStationComponent
             if (SailStationComponent.instance != null)
             {
                 var sailStation = SailStationComponent.instance;
@@ -30,30 +28,6 @@ namespace DSPSailFlyby
                 }
 
                 __instance.shipsArr[__instance.shipCount] = sailStation.ship.renderingData;
-                __instance.shipCount++;
-            }
-
-            if (__instance.shipsArr != null)
-            {
-                while (__instance.capacity < __instance.shipCount + 1)
-                {
-                    __instance.Expand2x();
-                }
-
-                ShipRenderingData shipRenderingData = new();
-
-                var player = GameMain.data.mainPlayer;
-                shipRenderingData.SetPose(
-                    player.uPosition,
-                    player.uRotation,
-                    relativePos,
-                    relativeRot,
-                    Vector3.zero,
-                    0
-                );
-                shipRenderingData.gid = 1;
-                shipRenderingData.anim = Vector3.zero;
-                __instance.shipsArr[__instance.shipCount] = shipRenderingData;
                 __instance.shipCount++;
             }
 
@@ -68,6 +42,7 @@ namespace DSPSailFlyby
         [HarmonyPatch(typeof(LogisticShipUIRenderer), "Update")]
         public static void UpdateUIPostfix(LogisticShipUIRenderer __instance)
         {
+            // FIXME: SUPPORT MULTIPLE SailStationComponent
             if (SailStationComponent.instance != null)
             {
                 var sailStation = SailStationComponent.instance;
@@ -80,35 +55,42 @@ namespace DSPSailFlyby
                 __instance.shipCount++;
             }
 
-            if (__instance.shipsArr != null)
-            {
-                while (__instance.capacity < __instance.shipCount + 1)
-                {
-                    __instance.Expand2x();
-                }
-
-                ShipUIRenderingData shipUIRenderingData = new();
-                var player = GameMain.data.mainPlayer;
-                shipUIRenderingData.SetPose(
-                    player.uPosition,
-                    player.uRotation,
-                    10000,
-                    player.speed,
-                    0
-                );
-                shipUIRenderingData.gid = 1;
-
-                VectorLF3 viewTargetUPos = __instance.uiStarmap.viewTargetUPos;
-                shipUIRenderingData.rpos = (shipUIRenderingData.upos - viewTargetUPos) * 0.00025;
-
-                __instance.shipsArr[__instance.shipCount] = shipUIRenderingData;
-                __instance.shipCount++;
-            }
-
             if (__instance.shipsBuffer != null)
             {
                 __instance.shipsBuffer.SetData(__instance.shipsArr, 0, 0, __instance.shipCount);
             }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PlanetFactory), "InsertInto")]
+        public static bool InsertIntoPrefix(PlanetFactory __instance, ref int __result, int entityId, int offset, int itemId, byte itemCount, byte itemInc, out byte remainInc)
+        {
+            remainInc = itemInc;
+            int beltId = __instance.entityPool[entityId].beltId;
+            if (beltId <= 0 && entityId > 0)
+            {
+                lock (__instance.entityMutexs[entityId])
+                {
+                    int customId = __instance.entityPool[entityId].customId;
+                    int customType = __instance.entityPool[entityId].customType;
+                    if (customId > 0)
+                    {
+                        if (customType == SailStationComponent.cachedId && itemId == 1501)
+                        {
+                            SailStationComponent sailStationComponent = (SailStationComponent)ComponentExtension.GetComponent(__instance, customType, customId);
+                            if (sailStationComponent.ship.stage == EFlybyStage.Idle && sailStationComponent.ship.sailPayload < 1000)
+                            {
+                                // FIXME: Stop allowing payload to slightly exceed 1000
+                                sailStationComponent.ship.sailPayload += itemCount;
+                                remainInc = 0;
+                                __result = (int)itemCount;
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
         }
     }
 }

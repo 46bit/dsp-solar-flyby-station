@@ -95,8 +95,9 @@ namespace DSPSailFlyby
             }
 
             var interstellarLogisticsTower = LDB.items.Select(2104);
-            sailStationModel.prefabDesc.materials = interstellarLogisticsTower.prefabDesc.materials;
-            sailStationModel.prefabDesc.lodMaterials = interstellarLogisticsTower.prefabDesc.lodMaterials;
+            Material newMat = Instantiate(interstellarLogisticsTower.prefabDesc.lodMaterials[0][0]);
+            newMat.color = new Color(0.45f, 0.78f, 0.9f, 1f);
+            sailStationModel.prefabDesc.lodMaterials = new[] { new[] { newMat } };
 
             Log.Info("ready");
         }

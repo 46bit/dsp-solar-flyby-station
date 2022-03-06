@@ -87,7 +87,7 @@ namespace DSPSailFlyby
 
             planetId = factory.planetId;
 
-            dockPosition = entity.pos + entity.rot * new VectorLF3(0, 1.8, 0);
+            dockPosition = entity.pos + entity.rot * new VectorLF3(0, 2.6, 0);
 
             ship = new();
             ship.inner = new ShipData();
@@ -96,6 +96,13 @@ namespace DSPSailFlyby
             ship.stage = EFlybyStage.Idle;
             ship.sailPayload = 0;
             ship.orbitId = 1;
+
+            int[] needs = new int[] { 1501 };
+            factory.entityNeeds[entityId] = needs;
+
+            // FIXME: Check if need to do this on import too
+            factory.entitySignPool[entityId].iconId0 = 1501;
+            factory.entitySignPool[entityId].iconType = 1U;
         }
 
         public override void OnRemoved(PlanetFactory factory) {
@@ -111,6 +118,7 @@ namespace DSPSailFlyby
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
 
+            // FIXME: Don't do this in proper nav
             ship.inner.uPos += (VectorLF3)ship.inner.uVel;
             float tripLength = 1000;
 
@@ -126,7 +134,7 @@ namespace DSPSailFlyby
                         ship.inner.t = 0f;
                         ship.stage = EFlybyStage.Takeoff;
                     }
-                    ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, entity.pos);
+                    ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
                     ship.inner.uVel.x = 0f;
                     ship.inner.uVel.y = 0f;
                     ship.inner.uVel.z = 0f;
@@ -166,7 +174,7 @@ namespace DSPSailFlyby
                     // Could this be taking off code? Maybe ShipData.t is used to control the takeoff/arrival to take a fixed time
                     ship.renderingData.anim.z = num52;
                     num52 = (3f - num52 - num52) * num52 * num52;
-                    ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, entity.pos + entity.pos.normalized * (25f * num52));
+                    ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition + dockPosition.normalized * (25f * num52));
                     ship.inner.uRot = astroPose.uRot * entity.rot;
                     // Stop accelerating in order to rely on the exact position code above
                     ship.inner.uVel.x = 0f;
@@ -244,7 +252,7 @@ namespace DSPSailFlyby
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
 
-            ship.sailPayload = Math.Min(ship.sailPayload + 379, 1000);
+            //ship.sailPayload = Math.Min(ship.sailPayload + 379, 1000);
             ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
             ship.inner.uRot = astroPose.uRot * entity.rot;
 
