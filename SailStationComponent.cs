@@ -196,6 +196,16 @@ namespace DSPSailFlyby
                     break;
             }
 
+            VectorLF3 viewTargetUPos;
+            if (ship.stage == EFlybyStage.EnRoute)
+            {
+                ship.renderingData.gid = 1;
+                ship.uiRenderingData.gid = 1;
+                viewTargetUPos = UIRoot.instance.uiGame.starmap.viewTargetUPos;
+                ship.uiRenderingData.rpos = (ship.uiRenderingData.upos - viewTargetUPos) * 0.00025;
+                return 0;
+            }
+
             // FIXME: Dig into rotations and positioning. It's all a bit weird from my
             // perspective, and so rotation during orbit is completely broken.
             VectorLF3 relativePos = factory.transport.gameData.relativePos;
@@ -225,7 +235,7 @@ namespace DSPSailFlyby
                 1501
             );
             ship.uiRenderingData.gid = 1;
-            VectorLF3 viewTargetUPos = UIRoot.instance.uiGame.starmap.viewTargetUPos;
+            viewTargetUPos = UIRoot.instance.uiGame.starmap.viewTargetUPos;
             ship.uiRenderingData.rpos = (ship.uiRenderingData.upos - viewTargetUPos) * 0.00025;
 
             return 0;
@@ -254,132 +264,184 @@ namespace DSPSailFlyby
 
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = star.galaxy.astroPoses[factory.planet.id];
+            AstroPose astroPose2 = star.galaxy.astroPoses[star.id];
+            AstroPose[] astroPoses = star.galaxy.astroPoses;
 
-            //if (factory.planet.star.uPosition.Distance(ship.inner.uPos) < orbit.radius)
-            //{
-            /*ship.stage = EFlybyStage.Flyby;
-                // FIXME: Sort out movement properly
-                ship.inner.uVel.Set(0, 0, 0);
+            ship.inner.planetB = factory.planet.star.id;
+            ship.inner.direction = 1;
+            bool flag = false;
+            double dt = 1.0 / 60.0;
+            float shipWarpSpeed = GameMain.history.logisticShipWarpSpeedModified;
+            float shipSailSpeed = GameMain.history.logisticShipSailSpeedModified;
+            bool warperFree = false;
+            double warpEnableDist = 0.0;
+            float num46 = Mathf.Sqrt(shipSailSpeed / 600f);
+            float num47 = num46;
+            if (num47 > 1f)
+            {
+                num47 = Mathf.Log(num47) + 1f;
+            }
+            float num48 = shipSailSpeed * 0.03f * num47;
+            float num49 = shipSailSpeed * 0.12f * num47;
+            float num50 = shipSailSpeed * 0.4f * num46;
+            float num51 = num46 * 0.006f + 1E-05f;
+            Quaternion quaternion = Quaternion.identity;
+            bool flag8 = false;
 
-                ship.orbitAngle = 0;
-                ship.inner.uPos = Maths.QRotateLF(orbit.rotation, new VectorLF3(
-                    Math.Sin(ship.orbitAngle * 0.017453292) * orbit.radius,
-                    0,
-                    Math.Cos(ship.orbitAngle * 0.017453292) * orbit.radius
-                )) + star.uPosition;*/
-
-            //ship.shipData.uRot = Quaternion. shipPos.normalized;
-            //}
-
-
-            // --------------------------------------------------------------------------------------------------------------------------
-
-            // This is what the dt passed to the original code is hardcoded to
-            double dt = 1.0 / 60;
-
-            // I think lhs3 is the position of the next destination ship dock
-            VectorLF3 positionOfDestination = Maths.QRotateLF(orbit.rotation, new VectorLF3(0, 0, 1)) + star.uPosition;
-            // Vector to the next destination ship dock (SIGN MEANINGLESS)
-            VectorLF3 vectorToDestination = positionOfDestination - ship.inner.uPos;
-            // Distance to the next destination
-            double distanceToDestination = vectorToDestination.magnitude;
-            // Rougher distance to destination ship dock (SIGN IMPORTANT)
-            VectorLF3 distanceToStartPlanetCenter = astroPose.uPos - ship.inner.uPos;
-            // Are we within sqrt(2.25) of the start planet?
-            bool flag9 = distanceToStartPlanetCenter.sqrMagnitude <= (double)(astroPose.uRadius * astroPose.uRadius) * 2.25;
-            // Are we close enough for the approach animation and fine control?
+            VectorLF3 lhs3;
+            lhs3 = astroPose2.uPos + Maths.QRotateLF(orbit.rotation, new VectorLF3(0, 0, orbit.radius));
+            VectorLF3 vectorLF = lhs3 - ship.inner.uPos;
+            double num53 = Math.Sqrt(vectorLF.x * vectorLF.x + vectorLF.y * vectorLF.y + vectorLF.z * vectorLF.z);
+            VectorLF3 vectorLF2 = ((ship.inner.direction > 0) ? (astroPose.uPos - ship.inner.uPos) : (astroPose2.uPos - ship.inner.uPos));
+            double num54 = vectorLF2.x * vectorLF2.x + vectorLF2.y * vectorLF2.y + vectorLF2.z * vectorLF2.z;
+            bool flag9 = num54 <= (double)(astroPose.uRadius * astroPose.uRadius) * 2.25;
             bool flag10 = false;
-            // FIXME: DO PROPER TERMINAL GUIDANCE
-            if (distanceToDestination < 6.0)
+            if (num53 < 6.0)
             {
                 ship.inner.t = 1f;
                 ship.stage = EFlybyStage.Flyby;
                 flag10 = true;
             }
-
-            // ------------------------------------------------------------------------------------------
-            // ACCELERATE BASED ON CURRENT SPEED AND DISTANCE TO DESTINATION
-            float shipSailSpeed = GameMain.data.history.logisticShipSailSpeedModified;
-            float measureOfShipMaxSpeed = Mathf.Sqrt(shipSailSpeed / 600f); // 600 is possibly something to do with upgrades
-            float secondMeasureOfShipMaxSpeed = measureOfShipMaxSpeed;
-            if (secondMeasureOfShipMaxSpeed > 1f)
+            float num55 = 0f;
+            if (flag)
             {
-                secondMeasureOfShipMaxSpeed = Mathf.Log(secondMeasureOfShipMaxSpeed) + 1f;
-            }
-            float slowestMultipleOfShipMaxSpeed = shipSailSpeed * 0.03f * secondMeasureOfShipMaxSpeed;
-            float middleMultipleOfShipMaxSpeed = shipSailSpeed * 0.12f * secondMeasureOfShipMaxSpeed;
-            float topMultipleOfShipMaxSpeed = shipSailSpeed * 0.4f * measureOfShipMaxSpeed;
-            double relateDistanceToDestinationToShipSpeed = distanceToDestination / ((double)ship.inner.uSpeed + 0.1) * 0.382 * (double)secondMeasureOfShipMaxSpeed;
-            float roughMaxAllowedSpeed = (float)((double)ship.inner.uSpeed * relateDistanceToDestinationToShipSpeed) + 6f;
-            if (roughMaxAllowedSpeed > shipSailSpeed)
-            {
-                roughMaxAllowedSpeed = shipSailSpeed;
-            }
-            float accelerationRate = (float)dt * (flag9 ? slowestMultipleOfShipMaxSpeed : middleMultipleOfShipMaxSpeed);
-            if (ship.inner.uSpeed < roughMaxAllowedSpeed - accelerationRate)
-            {
-                ship.inner.uSpeed += accelerationRate;
-            }
-            else if (ship.inner.uSpeed > roughMaxAllowedSpeed + topMultipleOfShipMaxSpeed)
-            {
-                ship.inner.uSpeed -= topMultipleOfShipMaxSpeed;
-            }
-            else
-            {
-                ship.inner.uSpeed = roughMaxAllowedSpeed;
-            }
-
-            // ------------------------------------------------------------------------------------------
-            // FIND PLANETS/STARS CLOSE TO THE SHIP
-            int nearbyAstroBodyId = -1;
-            double rhs = 0.0;
-            double distanceToNearestAstroBody = 1E+40; // care about objects if the square of the ship distance to their centre is less than this
-            int num67 = planetId / 100 * 100; // is there useful structure to planet ids?
-            for (int k = num67; k < num67 + 10; k++)
-            {
-                float uRadius = star.galaxy.astroPoses[k].uRadius;
-                if (uRadius >= 1f) // ignore zeroed-out planets/etc
+                double num56 = (astroPose.uPos - astroPose2.uPos).magnitude * 2.0;
+                double num57 = (((double)shipWarpSpeed < num56) ? ((double)shipWarpSpeed) : num56);
+                double num58 = warpEnableDist * 0.5;
+                if (ship.inner.warpState <= 0f)
                 {
-                    VectorLF3 vectorToCenterOfAstroBody = ship.inner.uPos - star.galaxy.astroPoses[k].uPos;
-                    double squaredDistanceToAstroBodyCentre = vectorToCenterOfAstroBody.sqrMagnitude;
-                    // Dot product will be zero if the vectors are orthogonal (ship is not at all approaching the astro body)
-                    // Don't yet understand reason for minus, what's being achieved here
-                    double minusShipVelAndAstroBodyVectorDotProduct = -((double)ship.inner.uVel.x * vectorToCenterOfAstroBody.x + (double)ship.inner.uVel.y * vectorToCenterOfAstroBody.y + (double)ship.inner.uVel.z * vectorToCenterOfAstroBody.z);
-
-                    bool astroBodyIsRelevant = minusShipVelAndAstroBodyVectorDotProduct > 0.0 || squaredDistanceToAstroBodyCentre < (double)(uRadius * uRadius * 7f);
-                    bool isCloserThanKnownAstroBody = squaredDistanceToAstroBodyCentre < distanceToNearestAstroBody;
-                    if (astroBodyIsRelevant && isCloserThanKnownAstroBody)
+                    ship.inner.warpState = 0f;
+                    if (num54 > 25000000.0 && num53 > num58 && ship.inner.uSpeed >= shipSailSpeed && (ship.inner.warperCnt > 0 || warperFree))
                     {
-                        rhs = ((minusShipVelAndAstroBodyVectorDotProduct < 0.0) ? 0.0 : minusShipVelAndAstroBodyVectorDotProduct); // something to do with taking evasive action? strange that the code could keep changing num65, doesn't break, logical hole
-                        nearbyAstroBodyId = k;
-                        distanceToNearestAstroBody = squaredDistanceToAstroBodyCentre;
+                        ship.inner.warperCnt--;
+                        ship.inner.warpState += (float)dt;
+                    }
+                }
+                else
+                {
+                    num55 = (float)(num57 * ((Math.Pow(1001.0, (double)ship.inner.warpState) - 1.0) / 1000.0));
+                    double num59 = (double)num55 * 0.0449 + 5000.0 + (double)shipSailSpeed * 0.25;
+                    double num60 = num53 - num59;
+                    if (num60 < 0.0)
+                    {
+                        num60 = 0.0;
+                    }
+                    if (num53 < num59)
+                    {
+                        ship.inner.warpState -= (float)(dt * 4.0);
+                    }
+                    else
+                    {
+                        ship.inner.warpState += (float)dt;
+                    }
+                    if (ship.inner.warpState < 0f)
+                    {
+                        ship.inner.warpState = 0f;
+                    }
+                    else if (ship.inner.warpState > 1f)
+                    {
+                        ship.inner.warpState = 1f;
+                    }
+                    if (ship.inner.warpState > 0f)
+                    {
+                        num55 = (float)(num57 * ((Math.Pow(1001.0, (double)ship.inner.warpState) - 1.0) / 1000.0));
+                        if ((double)num55 * dt > num60)
+                        {
+                            num55 = (float)(num60 / dt * 1.01);
+                        }
                     }
                 }
             }
-
-            // ------------------------------------------------------------------------------------------
-            // ACTUAL PATHFINDING (WITH BIG CODE BLOCK FOR NEARBY ASTRO BODY)
+            double num61 = num53 / ((double)ship.inner.uSpeed + 0.1) * 0.382 * (double)num47;
+            float num62;
+            if (ship.inner.warpState > 0f)
+            {
+                num62 = (ship.inner.uSpeed = shipSailSpeed + num55);
+                if (num62 > shipSailSpeed)
+                {
+                    num62 = shipSailSpeed;
+                }
+            }
+            else
+            {
+                float num63 = (float)((double)ship.inner.uSpeed * num61) + 6f;
+                if (num63 > shipSailSpeed)
+                {
+                    num63 = shipSailSpeed;
+                }
+                float num64 = (float)dt * (flag9 ? num48 : num49);
+                if (ship.inner.uSpeed < num63 - num64)
+                {
+                    ship.inner.uSpeed += num64;
+                }
+                else if (ship.inner.uSpeed > num63 + num50)
+                {
+                    ship.inner.uSpeed -= num50;
+                }
+                else
+                {
+                    ship.inner.uSpeed = num63;
+                }
+                num62 = ship.inner.uSpeed;
+            }
+            int num65 = -1;
+            double rhs = 0.0;
+            double num66 = 1E+40;
+            int num67 = ship.inner.planetA / 100 * 100;
+            int num68 = ship.inner.planetB / 100 * 100;
+            for (int k = num67; k < num67 + 10; k++)
+            {
+                float uRadius = astroPoses[k].uRadius;
+                if (uRadius >= 1f)
+                {
+                    VectorLF3 vectorLF3 = ship.inner.uPos - astroPoses[k].uPos;
+                    double num69 = vectorLF3.x * vectorLF3.x + vectorLF3.y * vectorLF3.y + vectorLF3.z * vectorLF3.z;
+                    double num70 = -((double)ship.inner.uVel.x * vectorLF3.x + (double)ship.inner.uVel.y * vectorLF3.y + (double)ship.inner.uVel.z * vectorLF3.z);
+                    if ((num70 > 0.0 || num69 < (double)(uRadius * uRadius * 7f)) && num69 < num66)
+                    {
+                        rhs = ((num70 < 0.0) ? 0.0 : num70);
+                        num65 = k;
+                        num66 = num69;
+                    }
+                }
+            }
+            if (num68 != num67)
+            {
+                for (int l = num68; l < num68 + 10; l++)
+                {
+                    float uRadius2 = astroPoses[l].uRadius;
+                    if (uRadius2 >= 1f)
+                    {
+                        VectorLF3 vectorLF4 = ship.inner.uPos - astroPoses[l].uPos;
+                        double num71 = vectorLF4.x * vectorLF4.x + vectorLF4.y * vectorLF4.y + vectorLF4.z * vectorLF4.z;
+                        double num72 = -((double)ship.inner.uVel.x * vectorLF4.x + (double)ship.inner.uVel.y * vectorLF4.y + (double)ship.inner.uVel.z * vectorLF4.z);
+                        if ((num72 > 0.0 || num71 < (double)(uRadius2 * uRadius2 * 7f)) && num71 < num66)
+                        {
+                            rhs = ((num72 < 0.0) ? 0.0 : num72);
+                            num65 = l;
+                            num66 = num71;
+                        }
+                    }
+                }
+            }
             VectorLF3 vectorLF5 = VectorLF3.zero;
             VectorLF3 rhs2 = VectorLF3.zero;
             float num73 = 0f;
             VectorLF3 vectorLF6 = Vector3.zero;
-            /*if (nearbyAstroBodyId > 0) // A lot of this seems to be to keep the ship 'glued' to a planet by accounting for the planet's movement
+            if (num65 > 0)
             {
-                float astroBodyRadius = star.galaxy.astroPoses[nearbyAstroBodyId].uRadius;
-                if (nearbyAstroBodyId % 100 == 0) // no idea what this logic does, honestly. checking for stars?
+                float num74 = astroPoses[num65].uRadius;
+                if (num65 % 100 == 0)
                 {
-                    astroBodyRadius *= 2.5f;
+                    num74 *= 2.5f;
                 }
-                double unknownMeasureOfAstroBodyMovement = Math.Max(1.0, ((star.galaxy.astroPoses[nearbyAstroBodyId].uPosNext - star.galaxy.astroPoses[nearbyAstroBodyId].uPos).magnitude - 0.5) * 0.6);
-                double unknownMeasureOfAstroBodyRadiusAndMovement = 1.0 + 1600.0 / (double)astroBodyRadius;
-                double unknownMeasureOfAstroBodyRadius2 = 1.0 + 250.0 / (double)astroBodyRadius;
-                unknownMeasureOfAstroBodyRadiusAndMovement *= unknownMeasureOfAstroBodyMovement * unknownMeasureOfAstroBodyMovement;
-
-                // FIXME: Here may be a problem. In the original algorithm, the line below changes if near the target planet. But it doesn't
-                // behave the same here. Detect if close to destination?
-                double measureOfIfAnInterestingAstroBody = (double)((nearbyAstroBodyId == planetId) ? 1.25f : 1.5f);
-                double sqrtOfAstroBodyDistance = Math.Sqrt(distanceToNearestAstroBody);
-                double num80 = (double)astroBodyRadius / sqrtOfAstroBodyDistance * 1.6 - 0.1;
+                double num75 = Math.Max(1.0, ((astroPoses[num65].uPosNext - astroPoses[num65].uPos).magnitude - 0.5) * 0.6);
+                double num76 = 1.0 + 1600.0 / (double)num74;
+                double num77 = 1.0 + 250.0 / (double)num74;
+                num76 *= num75 * num75;
+                double num78 = (double)((num65 == ship.inner.planetA || num65 == ship.inner.planetB) ? 1.25f : 1.5f);
+                double num79 = Math.Sqrt(num66);
+                double num80 = (double)num74 / num79 * 1.6 - 0.1;
                 if (num80 > 1.0)
                 {
                     num80 = 1.0;
@@ -388,12 +450,12 @@ namespace DSPSailFlyby
                 {
                     num80 = 0.0;
                 }
-                double num81 = sqrtOfAstroBodyDistance - (double)astroBodyRadius * 0.82;
+                double num81 = num79 - (double)num74 * 0.82;
                 if (num81 < 1.0)
                 {
                     num81 = 1.0;
                 }
-                double num82 = (double)(ship.inner.uSpeed - 6f) / (num81 * (double)secondMeasureOfShipMaxSpeed) * 0.6 - 0.01;
+                double num82 = (double)(num62 - 6f) / (num81 * (double)num47) * 0.6 - 0.01;
                 if (num82 > 1.5)
                 {
                     num82 = 1.5;
@@ -402,50 +464,47 @@ namespace DSPSailFlyby
                 {
                     num82 = 0.0;
                 }
-                VectorLF3 vectorLF7 = ship.inner.uPos + ((VectorLF3)ship.inner.uPos * rhs) - star.galaxy.astroPoses[nearbyAstroBodyId].uPos;
-                double num83 = vectorLF7.magnitude / (double)astroBodyRadius;
-                if (num83 < measureOfIfAnInterestingAstroBody) // I think this may be critical, but I don't understand it
+                VectorLF3 vectorLF7 = ship.inner.uPos + ((VectorLF3) ship.inner.uVel * rhs) - astroPoses[num65].uPos;
+                double num83 = vectorLF7.magnitude / (double)num74;
+                if (num83 < num78)
                 {
-                    double num84 = (num83 - 1.0) / (measureOfIfAnInterestingAstroBody - 1.0);
+                    double num84 = (num83 - 1.0) / (num78 - 1.0);
                     if (num84 < 0.0)
                     {
                         num84 = 0.0;
                     }
                     num84 = 1.0 - num84 * num84;
-                    rhs2 = vectorLF7.normalized * (num82 * num82 * num84 * 2.0);
+                    rhs2 = vectorLF7.normalized * (num82 * num82 * num84 * 2.0 * (double)(1f - ship.inner.warpState));
                 }
-                VectorLF3 vectorToShipFromNearbyAstroBody = ship.inner.uPos - star.galaxy.astroPoses[nearbyAstroBodyId].uPos;
-                VectorLF3 lhs4 = new VectorLF3(vectorToShipFromNearbyAstroBody.x / sqrtOfAstroBodyDistance, vectorToShipFromNearbyAstroBody.y / sqrtOfAstroBodyDistance, vectorToShipFromNearbyAstroBody.z / sqrtOfAstroBodyDistance);
-                vectorLF5 += lhs4 * num80; // roughly adds (distancetoshipfromnearbyastrobody * astrobodyradius / square of astro body distance)
+                VectorLF3 vectorLF8 = ship.inner.uPos - astroPoses[num65].uPos;
+                VectorLF3 lhs4 = new VectorLF3(vectorLF8.x / num79, vectorLF8.y / num79, vectorLF8.z / num79);
+                vectorLF5 += lhs4 * num80;
                 num73 = (float)num80;
-                double unexplainedMeasure = sqrtOfAstroBodyDistance / (double)astroBodyRadius;
-                unexplainedMeasure *= unexplainedMeasure;
-                unexplainedMeasure = (unknownMeasureOfAstroBodyRadiusAndMovement - unexplainedMeasure) / (unknownMeasureOfAstroBodyRadiusAndMovement - unknownMeasureOfAstroBodyRadius2);
-                if (unexplainedMeasure > 1.0)
+                double num85 = num79 / (double)num74;
+                num85 *= num85;
+                num85 = (num76 - num85) / (num76 - num77);
+                if (num85 > 1.0)
                 {
-                    unexplainedMeasure = 1.0;
+                    num85 = 1.0;
                 }
-                if (unexplainedMeasure > 0.0)
+                else if (num85 < 0.0)
                 {
-                    VectorLF3 v = Maths.QInvRotateLF(star.galaxy.astroPoses[nearbyAstroBodyId].uRot, vectorToShipFromNearbyAstroBody);
-                    VectorLF3 lhs5 = Maths.QRotateLF(star.galaxy.astroPoses[nearbyAstroBodyId].uRotNext, v) + star.galaxy.astroPoses[nearbyAstroBodyId].uPosNext;
-                    unexplainedMeasure = (3.0 - unexplainedMeasure - unexplainedMeasure) * unexplainedMeasure * unexplainedMeasure;
-                    vectorLF6 = (lhs5 - ship.inner.uPos) * unexplainedMeasure;
+                    num85 = 0.0;
                 }
-            }*/
-
-            // VELOCITY UPDATE
-            // But not the existence of uSpeed (updated above.) The two together control ship movement. I'm not
-            // clear on why both are used, except that perhaps uVel allows for some appearance of momentum that
-            // uRot wouldn't convey if used alone? Really, really want comments...
+                if (num85 > 0.0)
+                {
+                    VectorLF3 v = Maths.QInvRotateLF(astroPoses[num65].uRot, vectorLF8);
+                    VectorLF3 lhs5 = Maths.QRotateLF(astroPoses[num65].uRotNext, v) + astroPoses[num65].uPosNext;
+                    num85 = (3.0 - num85 - num85) * num85 * num85;
+                    vectorLF6 = (lhs5 - ship.inner.uPos) * num85;
+                }
+            }
             Vector3 vector;
-            ship.inner.uRot.ForwardUp(out ship.inner.uVel, out vector); // THIS UPDATES uVel, probably applies uRot normally
-
-            // ANGULAR VELOCITY UPDATE
-            Vector3 vector2 = vector * (1f - num73) + (Vector3) vectorLF5 * num73;
+            ship.inner.uRot.ForwardUp(out ship.inner.uVel, out vector);
+            Vector3 vector2 = vector * (1f - num73) + (Vector3)vectorLF5 * num73;
             vector2 -= Vector3.Dot(vector2, ship.inner.uVel) * ship.inner.uVel;
             vector2.Normalize();
-            Vector3 vector3 = vectorToDestination.normalized + rhs2; // vector to next dock, combined with something from collision detection
+            Vector3 vector3 = vectorLF.normalized + rhs2;
             Vector3 a = Vector3.Cross(ship.inner.uVel, vector3);
             float num86 = ship.inner.uVel.x * vector3.x + ship.inner.uVel.y * vector3.y + ship.inner.uVel.z * vector3.z;
             Vector3 a2 = Vector3.Cross(vector, vector2);
@@ -458,54 +517,87 @@ namespace DSPSailFlyby
             {
                 a2 = a2.normalized;
             }
-            float d = ((relateDistanceToDestinationToShipSpeed < 3.0) ? ((3.25f - (float)relateDistanceToDestinationToShipSpeed) * 4f) : (ship.inner.uSpeed / shipSailSpeed * (flag9 ? 0.2f : 1f)));
+            float d = ((num61 < 3.0) ? ((3.25f - (float)num61) * 4f) : (num62 / shipSailSpeed * (flag9 ? 0.2f : 1f)));
             a = a * d + a2 * 2f;
             Vector3 a3 = a - ship.inner.uAngularVel;
             float d2 = ((a3.sqrMagnitude < 0.1f) ? 1f : 0.05f);
             ship.inner.uAngularVel += a3 * d2;
-
-            // POSITION UPDATE: velocity * speed * time passed
-            // Ship position seems to be 'hacked' by the final term to keep it near a nearby astro body
-            double speedTimesTimePassed = (double)ship.inner.uSpeed * dt;
-            ship.inner.uPos.x += (double)ship.inner.uVel.x * speedTimesTimePassed + vectorLF6.x;
-            ship.inner.uPos.y += (double)ship.inner.uVel.y * speedTimesTimePassed + vectorLF6.y;
-            ship.inner.uPos.z += (double)ship.inner.uVel.z * speedTimesTimePassed + vectorLF6.z;
-
-            // ROTATION UPDATE
-            Vector3 normalizedAngularVel = ship.inner.uAngularVel.normalized;
+            double num88 = (double)ship.inner.uSpeed * dt;
+            ship.inner.uPos.x = ship.inner.uPos.x + (double)ship.inner.uVel.x * num88 + vectorLF6.x;
+            ship.inner.uPos.y = ship.inner.uPos.y + (double)ship.inner.uVel.y * num88 + vectorLF6.y;
+            ship.inner.uPos.z = ship.inner.uPos.z + (double)ship.inner.uVel.z * num88 + vectorLF6.z;
+            Vector3 normalized = ship.inner.uAngularVel.normalized;
             double num89 = (double)ship.inner.uAngularVel.magnitude * dt * 0.5;
             float w = (float)Math.Cos(num89);
             float num90 = (float)Math.Sin(num89);
-            Quaternion lhs6 = new Quaternion(normalizedAngularVel.x * num90, normalizedAngularVel.y * num90, normalizedAngularVel.z * num90, w);
-            ship.inner.uRot *= lhs6;
-
-            //Quaternion quaternion = Quaternion.identity;
-            bool flag8 = false;
-            /*if (num53 < 100.0) // if within 100 of destination
+            Quaternion lhs6 = new Quaternion(normalized.x * num90, normalized.y * num90, normalized.z * num90, w);
+            ship.inner.uRot = lhs6 * ship.inner.uRot;
+            if (ship.inner.warpState > 0f)
+            {
+                float num91 = ship.inner.warpState * ship.inner.warpState * ship.inner.warpState;
+                ship.inner.uRot = Quaternion.Slerp(ship.inner.uRot, Quaternion.LookRotation(vector3, vector2), num91);
+                ship.inner.uAngularVel *= 1f - num91;
+            }
+            if (num53 < 100.0)
             {
                 float num92 = 1f - (float)num53 / 100f;
                 num92 = (3f - num92 - num92) * num92 * num92;
                 num92 *= num92;
-                //quaternion = Quaternion.Slerp(ship.inner.uRot, astroPose2.uRot * (gStationPool[shipData.otherGId].shipDockRot * new Quaternion(0.70710677f, 0f, 0f, -0.70710677f)), num92);
+                if (ship.inner.direction > 0)
+                {
+                    // FIXME: Figure out what it should be for the orbit...
+                    //quaternion = Quaternion.Slerp(ship.inner.uRot, astroPose2.uRot * (gStationPool[shipData.otherGId].shipDockRot * new Quaternion(0.70710677f, 0f, 0f, -0.70710677f)), num92);
+                    quaternion = Quaternion.Slerp(ship.inner.uRot, astroPose2.uRot, num92);
+                }
+                else
+                {
+                    Vector3 vector4 = (ship.inner.uPos - astroPose.uPos).normalized;
+                    Vector3 normalized2 = (ship.inner.uVel - Vector3.Dot(ship.inner.uVel, vector4) * vector4).normalized;
+                    quaternion = Quaternion.Slerp(ship.inner.uRot, Quaternion.LookRotation(normalized2, vector4), num92);
+                }
                 flag8 = true;
-            }*/
-            if (flag10) // if within 6 to destination
+            }
+            if (flag10)
             {
-                ship.inner.uRot = Quaternion.identity; //quaternion;
-                /*ship.inner.pPosTemp = Maths.QInvRotateLF(astroPose2.uRot, ship.inner.uPos - astroPose2.uPos);
-                ship.inner.pRotTemp = Quaternion.Inverse(astroPose2.uRot) * ship.inner.uRot;*/
-                //quaternion = Quaternion.identity;
+                ship.inner.uRot = quaternion;
+                if (ship.inner.direction > 0)
+                {
+                    ship.inner.pPosTemp = Maths.QInvRotateLF(astroPose2.uRot, ship.inner.uPos - astroPose2.uPos);
+                    ship.inner.pRotTemp = Quaternion.Inverse(astroPose2.uRot) * ship.inner.uRot;
+                }
+                else
+                {
+                    ship.inner.pPosTemp = Maths.QInvRotateLF(astroPose.uRot, ship.inner.uPos - astroPose.uPos);
+                    ship.inner.pRotTemp = Quaternion.Inverse(astroPose.uRot) * ship.inner.uRot;
+                }
+                quaternion = Quaternion.identity;
                 flag8 = false;
             }
             if (ship.renderingData.anim.z > 1f)
             {
-                ship.renderingData.anim.z -= (float)dt * 0.3f;
+                ship.renderingData.anim.z -= - (float)dt * 0.3f;
             }
             else
             {
                 ship.renderingData.anim.z = 1f;
             }
             ship.renderingData.anim.w = ship.inner.warpState;
+            VectorLF3 relativePos = GameMain.data.relativePos;
+            Quaternion relativeRot = GameMain.data.relativeRot;
+            if (flag8)
+            {
+                ship.renderingData.SetPose(ship.inner.uPos, quaternion, relativePos, relativeRot, ship.inner.uVel * ship.inner.uSpeed, 1501);
+                ship.uiRenderingData.SetPose(ship.inner.uPos, quaternion, (float)(astroPose.uPos - astroPose2.uPos).magnitude, ship.inner.uSpeed, 1501);
+            }
+            else
+            {
+                ship.renderingData.SetPose(ship.inner.uPos, ship.inner.uRot, relativePos, relativeRot, ship.inner.uVel * ship.inner.uSpeed, 1501);
+                ship.uiRenderingData.SetPose(ship.inner.uPos, ship.inner.uRot, (float)(astroPose.uPos - astroPose2.uPos).magnitude, ship.inner.uSpeed, 1501);
+            }
+            if (ship.renderingData.anim.z < 0f)
+            {
+                ship.renderingData.anim.z = 0f;
+            }
         }
 
         protected void UpdateFlybyShip(PlanetFactory factory, ref float tripLength)
