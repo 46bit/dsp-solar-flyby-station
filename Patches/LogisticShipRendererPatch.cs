@@ -13,48 +13,73 @@ namespace DSPSailFlyby
     [HarmonyPatch]
     public static class LogisticShipRendererPatch
     {
-        // FIXME: Stop the original method from calling shipsBuffer.SetData? Or set less here
         [HarmonyPostfix]
         [HarmonyPatch(typeof(LogisticShipRenderer), "Update")]
         public static void UpdatePostfix(LogisticShipRenderer __instance)
         {
-            // FIXME: SUPPORT MULTIPLE SailStationComponent
-            if (SailStationComponent.instance != null)
+            for (int i = 0; i < GameMain.data.localStar.planetCount; i++)
             {
-                var sailStation = SailStationComponent.instance;
-                while (__instance.capacity < __instance.shipCount + 1)
+                PlanetData planet = GameMain.data.localStar.planets[i];
+                PlanetFactory factory = planet.factory;
+                if (factory == null || factory.entityCursor < 2)
+                {
+                    continue;
+                }
+                var pool = factory.GetSystem<ComponentExtension>(ComponentExtension.cachedId).GetPool(SailStationComponent.cachedId);
+                while (__instance.capacity < __instance.shipCount + pool.poolCursor - 1)
                 {
                     __instance.Expand2x();
                 }
-
-                __instance.shipsArr[__instance.shipCount] = sailStation.ship.renderingData;
-                __instance.shipCount++;
+                for (int j = 1; j < pool.poolCursor; j++)
+                {
+                    if (pool.pool[j] == null)
+                    {
+                        continue;
+                    }
+                    SailStationComponent sailStationComponent = (SailStationComponent)pool.pool[j];
+                    __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.renderingData;
+                    __instance.shipCount++;
+                }
             }
 
+            // FIXME: Don't re-render data not added by this function
             if (__instance.shipsBuffer != null)
             {
                 __instance.shipsBuffer.SetData(__instance.shipsArr, 0, 0, __instance.shipCount);
             }
         }
 
-        // FIXME: Stop the original method from calling shipsBuffer.SetData? Or set less here
         [HarmonyPostfix]
         [HarmonyPatch(typeof(LogisticShipUIRenderer), "Update")]
         public static void UpdateUIPostfix(LogisticShipUIRenderer __instance)
         {
-            // FIXME: SUPPORT MULTIPLE SailStationComponent
-            if (SailStationComponent.instance != null)
+            // FIXME: Support rendering sail ships in other star systems when viewed on starmap
+            for (int i = 0; i < GameMain.data.localStar.planetCount; i++)
             {
-                var sailStation = SailStationComponent.instance;
-                while (__instance.capacity < __instance.shipCount + 1)
+                PlanetData planet = GameMain.data.localStar.planets[i];
+                PlanetFactory factory = planet.factory;
+                if (factory == null || factory.entityCursor < 2)
+                {
+                    continue;
+                }
+                var pool = factory.GetSystem<ComponentExtension>(ComponentExtension.cachedId).GetPool(SailStationComponent.cachedId);
+                while (__instance.capacity < __instance.shipCount + pool.poolCursor - 1)
                 {
                     __instance.Expand2x();
                 }
-
-                __instance.shipsArr[__instance.shipCount] = sailStation.ship.uiRenderingData;
-                __instance.shipCount++;
+                for (int j = 1; j < pool.poolCursor; j++)
+                {
+                    if (pool.pool[j] == null)
+                    {
+                        continue;
+                    }
+                    SailStationComponent sailStationComponent = (SailStationComponent) pool.pool[j];
+                    __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.uiRenderingData;
+                    __instance.shipCount++;
+                }
             }
 
+            // FIXME: Don't re-render data not added by this function
             if (__instance.shipsBuffer != null)
             {
                 __instance.shipsBuffer.SetData(__instance.shipsArr, 0, 0, __instance.shipCount);
