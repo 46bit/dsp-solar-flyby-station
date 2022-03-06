@@ -72,7 +72,6 @@ namespace DSPSailFlyby
         }
 
         public static SailStationComponent instance;
-        const int moveSpeed = 25;
 
         public int planetId;
         public VectorLF3 dockPosition;
@@ -88,7 +87,7 @@ namespace DSPSailFlyby
 
             planetId = factory.planetId;
 
-            dockPosition = entity.pos * 1.1f;
+            dockPosition = entity.pos + entity.rot * new VectorLF3(0, 1.8, 0);
 
             ship = new();
             ship.inner = new ShipData();
@@ -221,7 +220,10 @@ namespace DSPSailFlyby
             // Can this also control the trail 'flames' visible when ships zoom away from
             // planets? It's not controlled by velocity, because the flames still exist when
             // ships are momentarily stationary before dropping onto home platforms.
-            ship.renderingData.anim.z = 1.5f; // 0.7f; // 1;
+            if (ship.stage != EFlybyStage.Idle)
+            {
+                ship.renderingData.anim.z = 1.5f;
+            }
 
             ship.uiRenderingData.SetPose(
                 ship.inner.uPos,
