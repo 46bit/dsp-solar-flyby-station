@@ -165,7 +165,7 @@ namespace DSPSailFlyby
             );
             ship.renderingData.gid = 1;
             ship.renderingData.anim = Vector3.zero;
-            ship.renderingData.anim.z = (ship.stage != EFlybyStage.Idle) ? 0f : 1.5f;
+            ship.renderingData.anim.z = (ship.stage == EFlybyStage.Idle) ? 0f : 1.5f;
 
             ship.uiRenderingData.SetPose(
                 ship.inner.uPos,
