@@ -33,25 +33,109 @@ namespace DSPSailFlyby
         public void Import(BinaryReader r)
         {
             // Version control
-            Assert.Equals(r.ReadByte(), 2);
+            Assert.Equals(r.ReadByte(), 3);
 
-            inner.Import(r);
             orbitId = r.ReadInt32();
-            stage = (EFlybyStage) r.ReadByte();
+            stage = (EFlybyStage)r.ReadByte();
             sailPayload = r.ReadInt32();
             orbitAngle = r.ReadDouble();
+
+            inner.Import(r);
+
+            renderingData = new ShipRenderingData();
+            renderingData.gid = r.ReadInt32();
+            renderingData.pos = new Vector3(
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle()
+            );
+            renderingData.vel = new Vector3(
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle()
+            );
+            renderingData.anim = new Vector4(
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle()
+            );
+            renderingData.rot = new Quaternion(
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle()
+            );
+            renderingData.itemId = r.ReadUInt32();
+
+            uiRenderingData = new ShipUIRenderingData();
+            uiRenderingData.gid = r.ReadInt32();
+            uiRenderingData.trip = r.ReadSingle();
+            uiRenderingData.upos = new VectorLF3(
+                r.ReadDouble(),
+                r.ReadDouble(),
+                r.ReadDouble()
+            );
+            uiRenderingData.rpos = new Vector3(
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle()
+            );
+            uiRenderingData.urot = new Quaternion(
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle(),
+                r.ReadSingle()
+            );
+            uiRenderingData.speed = r.ReadSingle();
+            uiRenderingData.itemId = r.ReadUInt32();
+            uiRenderingData.param = r.ReadSingle();
         }
 
         public void Export(BinaryWriter w)
         {
             // Version control
-            w.Write((byte)2);
+            w.Write((byte)3);
 
-            inner.Export(w);
             w.Write(orbitId);
-            w.Write((int)stage);
+            w.Write((byte)stage);
             w.Write(sailPayload);
             w.Write(orbitAngle);
+
+            inner.Export(w);
+
+            w.Write(renderingData.gid);
+            w.Write(renderingData.pos.x);
+            w.Write(renderingData.pos.y);
+            w.Write(renderingData.pos.z);
+            w.Write(renderingData.vel.x);
+            w.Write(renderingData.vel.y);
+            w.Write(renderingData.vel.z);
+            w.Write(renderingData.anim.x);
+            w.Write(renderingData.anim.y);
+            w.Write(renderingData.anim.z);
+            w.Write(renderingData.anim.w);
+            w.Write(renderingData.rot.x);
+            w.Write(renderingData.rot.y);
+            w.Write(renderingData.rot.z);
+            w.Write(renderingData.rot.w);
+            w.Write(renderingData.itemId);
+
+            w.Write(uiRenderingData.gid);
+            w.Write(uiRenderingData.trip);
+            w.Write(uiRenderingData.upos.x);
+            w.Write(uiRenderingData.upos.y);
+            w.Write(uiRenderingData.upos.z);
+            w.Write(uiRenderingData.rpos.x);
+            w.Write(uiRenderingData.rpos.y);
+            w.Write(uiRenderingData.rpos.z);
+            w.Write(uiRenderingData.urot.x);
+            w.Write(uiRenderingData.urot.y);
+            w.Write(uiRenderingData.urot.z);
+            w.Write(uiRenderingData.urot.w);
+            w.Write(uiRenderingData.speed);
+            w.Write(uiRenderingData.itemId);
+            w.Write(uiRenderingData.param);
         }
     }
 
@@ -92,19 +176,18 @@ namespace DSPSailFlyby
             ship.stage = EFlybyStage.Idle;
             ship.sailPayload = 0;
             ship.orbitId = 1;
-
-            int[] needs = new int[] { 1501 };
-            factory.entityNeeds[entityId] = needs;
-
-            // FIXME: Check if need to do this on import too
-            factory.entitySignPool[entityId].iconId0 = 1501;
-            factory.entitySignPool[entityId].iconType = 1U;
         }
 
         public override void OnRemoved(PlanetFactory factory) {
             base.OnRemoved(factory);
 
             ship = null;
+        }
+
+        public override void UpdateSigns(ref SignData data, int updateResult, float power, PlanetFactory factory)
+        {
+            data.iconId0 = 1501;
+            data.iconType = 1U;
         }
 
         public override int InternalUpdate(float power, PlanetFactory factory)
@@ -164,7 +247,6 @@ namespace DSPSailFlyby
                 1501
             );
             ship.renderingData.gid = 1;
-            ship.renderingData.anim = Vector3.zero;
             ship.renderingData.anim.z = (ship.stage == EFlybyStage.Idle) ? 0f : 1.5f;
 
             ship.uiRenderingData.SetPose(
@@ -442,13 +524,14 @@ namespace DSPSailFlyby
             base.Import(r);
 
             // Version number
-            Assert.Equals(r.ReadByte(), 2);
+            Assert.Equals(r.ReadByte(), 3);
 
             planetId = r.ReadInt32();
             dockPosition = new();
             dockPosition.x = r.ReadDouble();
             dockPosition.y = r.ReadDouble();
             dockPosition.z = r.ReadDouble();
+
             ship = new();
             ship.Import(r);
         }
@@ -458,12 +541,13 @@ namespace DSPSailFlyby
             base.Export(w);
 
             // Version number
-            w.Write(2);
+            w.Write((byte)3);
 
             w.Write(planetId);
             w.Write(dockPosition.x);
             w.Write(dockPosition.y);
             w.Write(dockPosition.z);
+
             ship.Export(w);
         }
     }
