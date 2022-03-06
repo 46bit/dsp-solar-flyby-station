@@ -118,8 +118,10 @@ namespace DSPSailFlyby
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
 
-            // FIXME: Don't do this in proper nav
-            ship.inner.uPos += (VectorLF3)ship.inner.uVel;
+            if (ship.stage == EFlybyStage.Flyby)
+            {
+                ship.inner.uPos += (VectorLF3)ship.inner.uVel;
+            }
             float tripLength = 1000;
 
             switch (ship.stage)
@@ -150,7 +152,6 @@ namespace DSPSailFlyby
                     break;
             }
 
-            VectorLF3 viewTargetUPos;
             if (ship.stage == EFlybyStage.EnRoute || ship.stage == EFlybyStage.Returning)
             {
                 return 0;
@@ -188,7 +189,7 @@ namespace DSPSailFlyby
                 1501
             );
             ship.uiRenderingData.gid = 1;
-            viewTargetUPos = UIRoot.instance.uiGame.starmap.viewTargetUPos;
+            VectorLF3 viewTargetUPos = UIRoot.instance.uiGame.starmap.viewTargetUPos;
             ship.uiRenderingData.rpos = (ship.uiRenderingData.upos - viewTargetUPos) * 0.00025;
 
             return 0;
@@ -330,7 +331,7 @@ namespace DSPSailFlyby
 
             // Drop sails randomly, on average every third game update
             // FIXME: Do in regular configurable pattern
-            if (RandomTable.Integer(ref swarm.randSeed, 6) == 5)
+            if (RandomTable.Integer(ref swarm.randSeed, 8) == 7)
             {
                 VectorLF3 vel = VectorLF3.Cross(ship.inner.uPos, orbit.up).normalized;
                 vel *= Math.Sqrt(factory.dysonSphere.gravity / orbit.radius);
@@ -389,12 +390,71 @@ namespace DSPSailFlyby
 
         protected void UpdateLandingShip(PlanetFactory factory)
         {
-            ship.stage = EFlybyStage.Cooldown;
+            EntityData entity = factory.entityPool[entityId];
+            AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
+
+            //// FIXME: Take into account the orbit radius AND update the rotation
+            //ship.inner.uVel = (factory.planet.star.uPosition - ship.inner.uPos).normalized * moveSpeed;
+            float shipSailSpeed = GameMain.data.history.logisticShipSailSpeedModified;
+            float num46 = Mathf.Sqrt(shipSailSpeed / 600f);
+            float num47 = num46;
+            if (num47 > 1f)
+            {
+                num47 = Mathf.Log(num47) + 1f;
+            }
+            float num48 = shipSailSpeed * 0.03f * num47;
+            float num49 = shipSailSpeed * 0.12f * num47;
+            float num50 = shipSailSpeed * 0.4f * num46;
+            float num51 = num46 * 0.006f + 1E-05f;
+
+            ship.inner.t -= num51 * 0.6666667f;
+            float num52 = ship.inner.t;
+            if (ship.inner.t < 0f)
+            {
+                ship.inner.t = 1f;
+                num52 = 0f;
+                ship.stage = EFlybyStage.Cooldown;
+            }
+            ship.renderingData.anim.z = num52;
+            num52 = (3f - num52 - num52) * num52 * num52;
+            VectorLF3 lhs = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
+            VectorLF3 lhs2 = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, ship.inner.pPosTemp);
+            ship.inner.uPos = lhs * (double)(1f - num52) + lhs2 * (double)num52;
+            ship.inner.uRot = astroPose.uRot * Quaternion.Slerp(entity.rot, ship.inner.pRotTemp, num52 * 2f - 1f);
+            ship.inner.uVel.x = 0f;
+			ship.inner.uVel.y = 0f;
+			ship.inner.uVel.z = 0f;
+			ship.inner.uSpeed = 0f;
+			ship.inner.uAngularVel.x = 0f;
+			ship.inner.uAngularVel.y = 0f;
+			ship.inner.uAngularVel.z = 0f;
+            ship.inner.uAngularSpeed = 0f;
         }
 
         protected void UpdateCooldownShip(PlanetFactory factory)
         {
-            ship.stage = EFlybyStage.Idle;
+            EntityData entity = factory.entityPool[entityId];
+            AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
+
+            ship.inner.t -= 0.03335f;
+            if (ship.inner.t < 0f)
+            {
+                ship.inner.t = 0f;
+                ship.stage = EFlybyStage.Idle;
+            }
+            ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
+            ship.inner.uVel.x = 0f;
+            ship.inner.uVel.y = 0f;
+            ship.inner.uVel.z = 0f;
+            ship.inner.uSpeed = 0f;
+            ship.inner.uRot = astroPose.uRot * entity.rot;
+            ship.inner.uAngularVel.x = 0f;
+            ship.inner.uAngularVel.y = 0f;
+            ship.inner.uAngularVel.z = 0f;
+            ship.inner.uAngularSpeed = 0f;
+            ship.inner.pPosTemp = Vector3.zero;
+            ship.inner.pRotTemp = Quaternion.identity;
+			ship.renderingData.anim.z = 0f;
         }
 
         public override void Import(BinaryReader r)
