@@ -78,7 +78,9 @@ namespace DSPSailFlyby
             );
 
             Harmony harmony = new Harmony(MODGUID);
+            harmony.PatchAll(typeof(PlanetFactoryPatch));
             harmony.PatchAll(typeof(LogisticShipRendererPatch));
+            harmony.PatchAll(typeof(LogisticShipUIRendererPatch));
 
             ProtoRegistry.onLoadingFinished += OnLoadingFinished;
 

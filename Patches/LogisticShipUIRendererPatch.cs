@@ -11,12 +11,13 @@ using CommonAPI.Systems;
 namespace DSPSailFlyby
 {
     [HarmonyPatch]
-    public static class LogisticShipRendererPatch
+    public static class LogisticShipUIRendererPatch
     {
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(LogisticShipRenderer), "Update")]
-        public static void UpdatePostfix(LogisticShipRenderer __instance)
+        [HarmonyPatch(typeof(LogisticShipUIRenderer), "Update")]
+        public static void UpdateUIPostfix(LogisticShipUIRenderer __instance)
         {
+            // FIXME: Support rendering sail ships in other star systems when viewed on starmap
             for (int i = 0; i < GameMain.data.localStar.planetCount; i++)
             {
                 PlanetData planet = GameMain.data.localStar.planets[i];
@@ -37,7 +38,7 @@ namespace DSPSailFlyby
                         continue;
                     }
                     SailStationComponent sailStationComponent = (SailStationComponent)pool.pool[j];
-                    __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.renderingData;
+                    __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.uiRenderingData;
                     __instance.shipCount++;
                 }
             }
