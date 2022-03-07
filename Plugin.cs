@@ -45,14 +45,14 @@ namespace DSPSailFlyby
 
             ComponentExtension.componentRegistry.Register(SailStationComponent.componentID, typeof(SailStationComponent));
 
-            ProtoRegistry.RegisterString("SailStationName", "Sail Station");
-            ProtoRegistry.RegisterString("SailStationDesc", "FIXME");
-            ProtoRegistry.RegisterString("SailStationRecipeDesc", "FIXME");
+            ProtoRegistry.RegisterString("SailStationName", "Solar Flyby Station");
+            ProtoRegistry.RegisterString("SailStationDesc", "Deploy solar sails into orbit using a logistic vessel.");
+            ProtoRegistry.RegisterString("SailStationRecipeDesc", "Deploy solar sails into orbit using a logistic vessel.");
             sailStationItem = ProtoRegistry.RegisterItem(
                 2115,
                 "SailStationName",
                 "SailStationDesc",
-                "dsp_factory_space_stations_icon_drone",
+                "dsp_sail_flyby_station_icon",
                 1707,
                 10
             );
@@ -60,13 +60,13 @@ namespace DSPSailFlyby
             ProtoRegistry.RegisterRecipe(
                 415,
                 ERecipeType.Assemble,
-                400,
-                new[] { 2105 },
-                new[] { 1 },
+                60 * 30,
+                new[] { 1107, 1206, 1305, 5002 },
+                new[] { 30, 20, 10, 1 },
                 new[] { sailStationItem.ID },
                 new[] { 1 },
                 "SailStationRecipeDesc",
-                1606
+                1512
             );
             sailStationModel = ProtoRegistry.RegisterModel(
                 304,
@@ -74,7 +74,7 @@ namespace DSPSailFlyby
                 "dsp_sail_flyby_station_v1",
                 null,
                 new[] { 18, 11, 32, 1 },
-                609
+                809
             );
 
             Harmony harmony = new Harmony(MODGUID);

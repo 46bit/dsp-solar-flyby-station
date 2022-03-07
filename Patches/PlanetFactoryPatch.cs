@@ -36,6 +36,7 @@ namespace DSPSailFlyby
                                 sailStationComponent.ship.sailPayload += itemCount;
                                 remainInc = 0;
                                 __result = (int)itemCount;
+                                GameMain.data.statistics.production.factoryStatPool[__instance.index].AddConsumptionToTotalArray(1501, itemCount);
                                 return false;
                             }
                         }

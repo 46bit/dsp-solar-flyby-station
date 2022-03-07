@@ -186,8 +186,10 @@ namespace DSPSailFlyby
 
         public override void UpdateSigns(ref SignData data, int updateResult, float power, PlanetFactory factory)
         {
-            data.iconId0 = 1501;
-            data.iconType = 1U;
+            //data.iconId0 = 1501;
+            //data.iconType = 1U;
+            data.iconId0 = 415; // FIXME: Bind to recipe ID directly
+            data.iconType = 2U;
         }
 
         public override int InternalUpdate(float power, PlanetFactory factory)
@@ -271,6 +273,17 @@ namespace DSPSailFlyby
             //ship.sailPayload = Math.Min(ship.sailPayload + 379, 1000);
             ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
             ship.inner.uRot = astroPose.uRot * entity.rot;
+
+            // The Dyson Swarm UI indicates that Orbit 1 is enabled by default and can't be deleted.
+            // It's true that it cannot be deleted, but it's actually disabled by default and the UI
+            // is hardcoded to show it as enabled. To allow us to target the orbit, we have to enable it.
+            if (ship.orbitId == 1)
+            {
+                ThreadingHelper.Instance.StartSyncInvoke(() =>
+                {
+                    factory.CheckOrCreateDysonSphere().swarm.SetOrbitEnable(1, true);
+                });
+            }
 
             if (ship.sailPayload >= 1000 && factory.dysonSphere?.swarm != null && factory.dysonSphere.swarm.OrbitEnabled(ship.orbitId))
             {

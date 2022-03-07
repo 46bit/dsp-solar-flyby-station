@@ -17,10 +17,19 @@ namespace DSPSailFlyby
         [HarmonyPatch(typeof(LogisticShipUIRenderer), "Update")]
         public static void UpdateUIPostfix(LogisticShipUIRenderer __instance)
         {
-            // FIXME: Support rendering sail ships in other star systems when viewed on starmap
-            for (int i = 0; i < GameMain.data.localStar.planetCount; i++)
+            StarData star = GameMain.data.localStar;
+            if (star == null)
             {
-                PlanetData planet = GameMain.data.localStar.planets[i];
+                return;
+            }
+            // FIXME: Support rendering sail ships in other star systems when viewed on starmap
+            for (int i = 0; i < star.planetCount; i++)
+            {
+                PlanetData planet = star.planets[i];
+                if (planet == null)
+                {
+                    continue;
+                }
                 PlanetFactory factory = planet.factory;
                 if (factory == null || factory.entityCursor < 2)
                 {
@@ -38,7 +47,10 @@ namespace DSPSailFlyby
                         continue;
                     }
                     SailStationComponent sailStationComponent = (SailStationComponent)pool.pool[j];
-                    __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.uiRenderingData;
+                    if (sailStationComponent.ship != null)
+                    {
+                        __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.uiRenderingData;
+                    }
                     __instance.shipCount++;
                 }
             }

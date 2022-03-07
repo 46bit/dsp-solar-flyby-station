@@ -17,9 +17,18 @@ namespace DSPSailFlyby
         [HarmonyPatch(typeof(LogisticShipRenderer), "Update")]
         public static void UpdatePostfix(LogisticShipRenderer __instance)
         {
-            for (int i = 0; i < GameMain.data.localStar.planetCount; i++)
+            StarData star = GameMain.data.localStar;
+            if (star == null)
             {
-                PlanetData planet = GameMain.data.localStar.planets[i];
+                return;
+            }
+            for (int i = 0; i < star.planetCount; i++)
+            {
+                PlanetData planet = star.planets[i];
+                if (planet == null)
+                {
+                    continue;
+                }
                 PlanetFactory factory = planet.factory;
                 if (factory == null || factory.entityCursor < 2)
                 {
@@ -37,8 +46,11 @@ namespace DSPSailFlyby
                         continue;
                     }
                     SailStationComponent sailStationComponent = (SailStationComponent)pool.pool[j];
-                    __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.renderingData;
-                    __instance.shipCount++;
+                    if (sailStationComponent.ship != null)
+                    {
+                        __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.renderingData;
+                        __instance.shipCount++;
+                    }
                 }
             }
 
