@@ -12,6 +12,9 @@ namespace DSPSailFlyby
 
     public class Navigate
     {
+        // Usage instructions:
+        // Must set `ship.planetA` and `ship.planetB` to closest astroBody IDs. Seems to work even if actual positions are in high orbit.
+        // For planets the astroBody IDs are `planet.id`. For stars it's `star.id * 100`.
         // Must set `ship.direction` to `-1` (if going to `positionA`) or `1` (if going to `positionB`)
         // Positions and rotations are both absolute positions, you may need to recalculate before every call to keep up to date with moving bodies
         // Returns true when within `desiredDistance` of `positionA` if `ship.direction == -1` or `positionB` if `ship.direction == 1`

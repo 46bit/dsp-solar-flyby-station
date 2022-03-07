@@ -370,8 +370,9 @@ namespace DSPSailFlyby
             VectorLF3 positionA = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
             Quaternion rotationA = astroPose.uRot * entity.rot * new Quaternion(0.70710677f, 0f, 0f, -0.70710677f);
 
-            ship.inner.planetB = star.id;
-            AstroPose astroPose2 = astroPoses[star.id];
+            int starAstroPoseId = star.id * 100;
+            ship.inner.planetB = starAstroPoseId;
+            AstroPose astroPose2 = astroPoses[starAstroPoseId];
             VectorLF3 positionB = astroPose2.uPos + Maths.QRotateLF(orbit.rotation, new VectorLF3(0, 0, orbit.radius));
             Quaternion rotationB = Quaternion.identity;
 
@@ -392,7 +393,7 @@ namespace DSPSailFlyby
 
             StarData star = factory.planet.star;
             DysonSwarm swarm = factory.dysonSphere.swarm;
-            SailOrbit orbit = swarm.orbits[1];
+            SailOrbit orbit = swarm.orbits[ship.orbitId];
 
             ship.orbitAngle -= 360.0 / 4000;
             VectorLF3 newShipPos = Maths.QRotateLF(orbit.rotation, new VectorLF3(
@@ -401,7 +402,7 @@ namespace DSPSailFlyby
                 Math.Cos(ship.orbitAngle * 0.017453292) * orbit.radius
             )) + star.uPosition;
             ship.inner.uVel = newShipPos - ship.inner.uPos;
-            ship.inner.uRot = star.galaxy.astroPoses[star.id].uRot * orbit.rotation * Quaternion.Euler(0, -90+(float)ship.orbitAngle, 0);
+            ship.inner.uRot = orbit.rotation * Quaternion.Euler(0, -90+(float)ship.orbitAngle, 0);
             ship.inner.uPos = newShipPos;
 
             tripLength = (float) 6.28 * orbit.radius;
@@ -410,22 +411,22 @@ namespace DSPSailFlyby
             // FIXME: Do in regular configurable pattern
             if (RandomTable.Integer(ref swarm.randSeed, 8) == 7)
             {
-                VectorLF3 vel = VectorLF3.Cross(ship.inner.uPos, orbit.up).normalized;
+                VectorLF3 vel = VectorLF3.Cross(ship.inner.uPos - star.uPosition, orbit.up).normalized;
                 vel *= Math.Sqrt(factory.dysonSphere.gravity / orbit.radius);
                 vel += RandomTable.SphericNormal(ref swarm.randSeed, 0.5);
 
                 DysonSail sail = default;
                 VectorLF3 jitter = RandomTable.SphericNormal(ref swarm.randSeed, 0.5);
-                sail.px = (float)ship.inner.uPos.x;
-                sail.py = (float)ship.inner.uPos.y;
-                sail.pz = (float)ship.inner.uPos.z;
+                sail.px = (float) (ship.inner.uPos.x - star.uPosition.x);
+                sail.py = (float) (ship.inner.uPos.y - star.uPosition.y);
+                sail.pz = (float) (ship.inner.uPos.z - star.uPosition.z);
                 sail.vx = (float)vel.x;
                 sail.vy = (float)vel.y;
                 sail.vz = (float)vel.z;
                 sail.gs = 1f;
                 ThreadingHelper.Instance.StartSyncInvoke(() =>
                 {
-                    swarm.AddSolarSail(sail, 1, expiryTime);
+                    swarm.AddSolarSail(sail, ship.orbitId, expiryTime);
                 });
                 ship.sailPayload--;
             }
@@ -451,8 +452,9 @@ namespace DSPSailFlyby
             VectorLF3 positionA = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
             Quaternion rotationA = astroPose.uRot * entity.rot * new Quaternion(0.70710677f, 0f, 0f, -0.70710677f);
 
-            ship.inner.planetB = star.id;
-            AstroPose astroPose2 = astroPoses[star.id];
+            int starAstroPoseId = star.id * 100;
+            ship.inner.planetB = starAstroPoseId;
+            AstroPose astroPose2 = astroPoses[starAstroPoseId];
             VectorLF3 positionB = ship.inner.uPos;
             Quaternion rotationB = ship.inner.uRot;
 
