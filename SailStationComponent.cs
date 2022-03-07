@@ -176,6 +176,19 @@ namespace DSPSailFlyby
             ship.stage = EFlybyStage.Idle;
             ship.sailPayload = 0;
             ship.orbitId = 1;
+
+            // The Dyson Swarm UI indicates that Orbit 1 is enabled by default and can't be deleted.
+            // It's true that it cannot be deleted, but it's actually disabled by default and the UI
+            // is hardcoded to show it as enabled. To allow us to target the orbit, we have to enable it.
+            // Doing this here avoids weird problems later.
+            // FIXME: Move this code to the UI once it exists?
+            if (ship.orbitId == 1)
+            {
+                ThreadingHelper.Instance.StartSyncInvoke(() =>
+                {
+                    factory.CheckOrCreateDysonSphere().swarm.SetOrbitEnable(1, true);
+                });
+            }
         }
 
         public override void OnRemoved(PlanetFactory factory) {
@@ -273,17 +286,6 @@ namespace DSPSailFlyby
             //ship.sailPayload = Math.Min(ship.sailPayload + 379, 1000);
             ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
             ship.inner.uRot = astroPose.uRot * entity.rot;
-
-            // The Dyson Swarm UI indicates that Orbit 1 is enabled by default and can't be deleted.
-            // It's true that it cannot be deleted, but it's actually disabled by default and the UI
-            // is hardcoded to show it as enabled. To allow us to target the orbit, we have to enable it.
-            if (ship.orbitId == 1)
-            {
-                ThreadingHelper.Instance.StartSyncInvoke(() =>
-                {
-                    factory.CheckOrCreateDysonSphere().swarm.SetOrbitEnable(1, true);
-                });
-            }
 
             if (ship.sailPayload >= 1000 && factory.dysonSphere?.swarm != null && factory.dysonSphere.swarm.OrbitEnabled(ship.orbitId))
             {
