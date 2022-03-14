@@ -48,7 +48,7 @@ namespace DSPSailFlyby
             double num54 = vectorLF2.x * vectorLF2.x + vectorLF2.y * vectorLF2.y + vectorLF2.z * vectorLF2.z;
             bool flag9 = num54 <= (double)(astroPose.uRadius * astroPose.uRadius) * 2.25;
             bool flag10 = false;
-            if (num53 < desiredDistance)
+            if (num53 <= desiredDistance)
             {
                 ship.t = 1f;
                 returnValue = true;
@@ -141,7 +141,7 @@ namespace DSPSailFlyby
             double num66 = 1E+40;
             int num67 = ship.planetA / 100 * 100;
             int num68 = ship.planetB / 100 * 100;
-            for (int k = num67; k < num67 + 10; k++)
+            for (int k = num67; k < num67 + 99; k++)
             {
                 float uRadius = astroPoses[k].uRadius;
                 if (uRadius >= 1f)
@@ -159,7 +159,7 @@ namespace DSPSailFlyby
             }
             if (num68 != num67)
             {
-                for (int l = num68; l < num68 + 10; l++)
+                for (int l = num68; l < num68 + 99; l++)
                 {
                     float uRadius2 = astroPoses[l].uRadius;
                     if (uRadius2 >= 1f)
@@ -183,10 +183,13 @@ namespace DSPSailFlyby
             if (num65 > 0)
             {
                 float num74 = astroPoses[num65].uRadius;
-                if (num65 % 100 == 0)
-                {
-                    num74 *= 2.5f;
-                }
+                // The original code makes logistics vessels avoid stars by 2.5x their radius
+                // That works very badly with the larger stars introduced by GalacticScale, to the
+                // extreme that vessels could never reach inner swarm orbits
+                // if (num65 % 100 == 0)
+                // {
+                //     num74 *= 2.5f;
+                // }
                 double num75 = Math.Max(1.0, ((astroPoses[num65].uPosNext - astroPoses[num65].uPos).magnitude - 0.5) * 0.6);
                 double num76 = 1.0 + 1600.0 / (double)num74;
                 double num77 = 1.0 + 250.0 / (double)num74;

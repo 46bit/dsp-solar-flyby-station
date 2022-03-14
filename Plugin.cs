@@ -31,6 +31,7 @@ namespace DSPSailFlyby
 
         public static ResourceData resourceData;
         public static ItemProto sailStationItem;
+        public static RecipeProto sailStationRecipe;
         public static ModelProto sailStationModel;
 
         void Awake()
@@ -53,11 +54,29 @@ namespace DSPSailFlyby
                 "SailStationName",
                 "SailStationDesc",
                 "dsp_sail_flyby_station_icon",
-                1707,
+                2705,
                 10
             );
+/*
+            if (dataArray[i].GridIndex >= 1101 && history.ItemUnlocked(dataArray[i].ID))
+            {
+                [TYPE][ROW ONE-BASED][COLUMN ONE BASED]
+                int num = dataArray[i].GridIndex / 1000;
+                int num2 = (dataArray[i].GridIndex - num * 1000) / 100 - 1;
+                int num3 = dataArray[i].GridIndex % 100 - 1;
+                if (num2 >= 0 && num3 >= 0 && num2 < 7 && num3 < 12)
+                {
+                    int num4 = num2 * 12 + num3;
+                    if (num4 >= 0 && num4 < this.indexArray.Length && num == this.currentType)
+                    {
+                        this.indexArray[num4] = iconSet.itemIconIndex[dataArray[i].ID];
+                        this.protoArray[num4] = dataArray[i];
+                    }
+                }
+*/
+
             sailStationItem.CanBuild = true;
-            ProtoRegistry.RegisterRecipe(
+            sailStationRecipe = ProtoRegistry.RegisterRecipe(
                 415,
                 ERecipeType.Assemble,
                 60 * 30,

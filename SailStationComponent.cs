@@ -182,13 +182,10 @@ namespace DSPSailFlyby
             // is hardcoded to show it as enabled. To allow us to target the orbit, we have to enable it.
             // Doing this here avoids weird problems later.
             // FIXME: Move this code to the UI once it exists?
-            if (ship.orbitId == 1)
+            ThreadingHelper.Instance.StartSyncInvoke(() =>
             {
-                ThreadingHelper.Instance.StartSyncInvoke(() =>
-                {
-                    factory.CheckOrCreateDysonSphere().swarm.SetOrbitEnable(1, true);
-                });
-            }
+                factory.CheckOrCreateDysonSphere().swarm.SetOrbitEnable(1, true);
+            });
         }
 
         public override void OnRemoved(PlanetFactory factory) {
@@ -199,10 +196,8 @@ namespace DSPSailFlyby
 
         public override void UpdateSigns(ref SignData data, int updateResult, float power, PlanetFactory factory)
         {
-            //data.iconId0 = 1501;
-            //data.iconType = 1U;
-            data.iconId0 = 415; // FIXME: Bind to recipe ID directly
-            data.iconType = 2U;
+            data.iconId0 = (uint)Plugin.sailStationRecipe.ID;
+            data.iconType = 2U; // recipe icon type
         }
 
         public override int InternalUpdate(float power, PlanetFactory factory)
@@ -380,7 +375,8 @@ namespace DSPSailFlyby
 
             ship.inner.direction = 1;
 
-            bool reached = Navigate.update(astroPoses, positionA, positionB, rotationA, rotationB, 1E40, 6, ref ship.inner, ref ship.renderingData, ref ship.uiRenderingData);
+            double reachedDistance = 6;
+            bool reached = Navigate.update(astroPoses, positionA, positionB, rotationA, rotationB, 1E40, reachedDistance, ref ship.inner, ref ship.renderingData, ref ship.uiRenderingData);
             if (reached)
             {
                 ship.stage = EFlybyStage.Flyby;
@@ -426,6 +422,7 @@ namespace DSPSailFlyby
                 sail.vy = (float)vel.y;
                 sail.vz = (float)vel.z;
                 sail.gs = 1f;
+                // FIXME: See if async would have better performance, and whether I need to avoid data ownership issues
                 ThreadingHelper.Instance.StartSyncInvoke(() =>
                 {
                     swarm.AddSolarSail(sail, ship.orbitId, expiryTime);
