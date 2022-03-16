@@ -155,6 +155,7 @@ namespace DSPSailFlyby
             }
         }
 
+        public bool active;
         public int planetId;
         public VectorLF3 dockPosition;
         public SailFlybyShipData ship;
@@ -162,6 +163,9 @@ namespace DSPSailFlyby
         public override void OnAdded(PrebuildData data, PlanetFactory factory)
         {
             base.OnAdded(data, factory);
+
+            active = true;
+
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
 
@@ -191,6 +195,7 @@ namespace DSPSailFlyby
         public override void OnRemoved(PlanetFactory factory) {
             base.OnRemoved(factory);
 
+            active = false;
             ship = null;
         }
 
@@ -538,7 +543,8 @@ namespace DSPSailFlyby
             base.Import(r);
 
             // Version number
-            Assert.Equals(r.ReadByte(), 3);
+            byte versionNumber = r.ReadByte();
+            Assert.True(versionNumber >= 3);
 
             planetId = r.ReadInt32();
             dockPosition = new();
@@ -546,6 +552,18 @@ namespace DSPSailFlyby
             dockPosition.y = r.ReadDouble();
             dockPosition.z = r.ReadDouble();
 
+            if (versionNumber >= 4)
+            {
+                active = r.ReadBoolean();
+                if (!active)
+                {
+                    return;
+                }
+            } else {
+                // Saving removed sailstationcomponents was broken before serialisation version 4,
+                // so by implication anything being imported is active.
+                active = true;
+            }
             ship = new();
             ship.Import(r);
         }
@@ -555,14 +573,19 @@ namespace DSPSailFlyby
             base.Export(w);
 
             // Version number
-            w.Write((byte)3);
+            w.Write((byte)4);
 
             w.Write(planetId);
             w.Write(dockPosition.x);
             w.Write(dockPosition.y);
             w.Write(dockPosition.z);
 
-            ship.Export(w);
+            w.Write(active);
+            if (active)
+            {
+                Assert.NotNull(ship);
+                ship.Export(w);
+            }
         }
     }
 }

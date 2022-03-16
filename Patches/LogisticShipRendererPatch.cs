@@ -41,11 +41,12 @@ namespace DSPSailFlyby
                 }
                 for (int j = 1; j < pool.poolCursor; j++)
                 {
-                    if (pool.pool[j] == null)
+                    FactoryComponent factoryComponent = pool.pool[j];
+                    if (factoryComponent == null || factoryComponent.id != j)
                     {
                         continue;
                     }
-                    SailStationComponent sailStationComponent = (SailStationComponent)pool.pool[j];
+                    SailStationComponent sailStationComponent = (SailStationComponent)factoryComponent;
                     if (sailStationComponent.ship != null)
                     {
                         __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.renderingData;
