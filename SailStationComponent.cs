@@ -205,6 +205,17 @@ namespace DSPSailFlyby
             data.iconType = 2U; // recipe icon type
         }
 
+        public int[] _needs;
+
+        public override int[] UpdateNeeds()
+        {
+            if (_needs == null)
+            {
+                _needs = new int[] { 1501 };
+            }
+            return _needs;
+        }
+
         public override int InternalUpdate(float power, PlanetFactory factory)
         {
             base.InternalUpdate(power, factory);
