@@ -29,16 +29,19 @@ namespace DSPSailFlyby
         public EFlybyStage stage;
         public int sailPayload;
         public double orbitAngle;
+        public float charge;
 
         public void Import(BinaryReader r)
         {
             // Version control
-            Assert.Equals(r.ReadByte(), 3);
+            float versionNumber = r.ReadByte();
+            Assert.True(versionNumber >= 3);
 
             orbitId = r.ReadInt32();
             stage = (EFlybyStage)r.ReadByte();
             sailPayload = r.ReadInt32();
             orbitAngle = r.ReadDouble();
+            charge = (versionNumber >= 4) ? r.ReadSingle() : 0.0f;
 
             inner.Import(r);
 
@@ -95,12 +98,13 @@ namespace DSPSailFlyby
         public void Export(BinaryWriter w)
         {
             // Version control
-            w.Write((byte)3);
+            w.Write((byte)4);
 
             w.Write(orbitId);
             w.Write((byte)stage);
             w.Write(sailPayload);
             w.Write(orbitAngle);
+            w.Write(charge);
 
             inner.Export(w);
 
@@ -141,6 +145,8 @@ namespace DSPSailFlyby
 
     public class SailStationComponent : FactoryComponent
     {
+        const float CHARGE_REQUIRED_TO_TAKE_OFF = 1_000_000_000;
+
         // Do not modify this code. This is template to help with dynamic ID assignment
         public static readonly string componentID = $"{Plugin.MODGUID}:SailStationComponent";
         private static int _cachedId;
@@ -216,9 +222,15 @@ namespace DSPSailFlyby
             return _needs;
         }
 
-        public override int InternalUpdate(float power, PlanetFactory factory)
+        public override void UpdatePowerState(ref PowerConsumerComponent component)
         {
-            base.InternalUpdate(power, factory);
+            // Only require workEnergyPerTick if the ship is charging, otherwise idleEnergyPerTick
+            component.SetRequiredEnergy(shipIsCharging());
+        }
+
+        public override int InternalUpdate(float powerAmount, PlanetFactory factory)
+        {
+            base.InternalUpdate(powerAmount, factory);
 
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
@@ -232,7 +244,7 @@ namespace DSPSailFlyby
             switch (ship.stage)
             {
                 case EFlybyStage.Idle:
-                    UpdateIdleShip(factory);
+                    UpdateIdleShip(factory, powerAmount);
                     break;
                 case EFlybyStage.Warmup:
                     UpdateWarmupShip(factory);
@@ -289,18 +301,24 @@ namespace DSPSailFlyby
             return 0;
         }
 
-        protected void UpdateIdleShip(PlanetFactory factory)
+        protected void UpdateIdleShip(PlanetFactory factory, float powerAmount)
         {
             EntityData entity = factory.entityPool[entityId];
             AstroPose astroPose = factory.planet.star.galaxy.astroPoses[factory.planet.id];
+
+            if (shipIsCharging())
+            {
+                ship.charge += powerAmount * Plugin.sailStationModel.prefabDesc.workEnergyPerTick;
+            }
 
             //ship.sailPayload = Math.Min(ship.sailPayload + 379, 1000);
             ship.inner.uPos = astroPose.uPos + Maths.QRotateLF(astroPose.uRot, dockPosition);
             ship.inner.uRot = astroPose.uRot * entity.rot;
 
-            if (ship.sailPayload >= 1000 && factory.dysonSphere?.swarm != null && factory.dysonSphere.swarm.OrbitEnabled(ship.orbitId))
+            if (shipIsCharged() && ship.sailPayload >= 1000 && factory.dysonSphere?.swarm != null && factory.dysonSphere.swarm.OrbitEnabled(ship.orbitId))
             {
                 ship.stage = EFlybyStage.Warmup;
+                ship.charge = 0.0f;
             }
         }
 
@@ -563,20 +581,12 @@ namespace DSPSailFlyby
             dockPosition.y = r.ReadDouble();
             dockPosition.z = r.ReadDouble();
 
-            if (versionNumber >= 4)
+            active = (versionNumber >= 4) ? r.ReadBoolean() : true;
+            if (active)
             {
-                active = r.ReadBoolean();
-                if (!active)
-                {
-                    return;
-                }
-            } else {
-                // Saving removed sailstationcomponents was broken before serialisation version 4,
-                // so by implication anything being imported is active.
-                active = true;
+                ship = new();
+                ship.Import(r);
             }
-            ship = new();
-            ship.Import(r);
         }
 
         public override void Export(BinaryWriter w)
@@ -597,6 +607,16 @@ namespace DSPSailFlyby
                 Assert.NotNull(ship);
                 ship.Export(w);
             }
+        }
+
+        protected bool shipIsCharging()
+        {
+            return ship.stage == EFlybyStage.Idle && ship.charge < CHARGE_REQUIRED_TO_TAKE_OFF && Plugin.shipsRequireEnergyToTakeoff;
+        }
+
+        protected bool shipIsCharged()
+        {
+            return ship.stage == EFlybyStage.Idle && (ship.charge >= CHARGE_REQUIRED_TO_TAKE_OFF || !Plugin.shipsRequireEnergyToTakeoff);
         }
     }
 }

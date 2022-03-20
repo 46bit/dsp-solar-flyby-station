@@ -34,10 +34,14 @@ namespace DSPSailFlyby
         public static RecipeProto sailStationRecipe;
         public static ModelProto sailStationModel;
 
+        public static bool shipsRequireEnergyToTakeoff;
+
         void Awake()
         {
             Log.logger = Logger;
             Log.Info("starting");
+
+            shipsRequireEnergyToTakeoff = Config.Bind("General", "Ships require energy to takeoff", true, new ConfigDescription("Change to false to get minimal energy consumption, like in v0.0.8 and earlier", new AcceptableValueList<bool>(true, false))).Value;
 
             resourceData = new ResourceData(MODNAME, "dsp_sail_flyby_station");
             resourceData.LoadAssetBundle("dsp_sail_flyby_station");
