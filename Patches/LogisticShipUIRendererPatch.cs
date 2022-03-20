@@ -48,7 +48,7 @@ namespace DSPSailFlyby
                         continue;
                     }
                     SailStationComponent sailStationComponent = (SailStationComponent)factoryComponent;
-                    if (sailStationComponent.ship != null)
+                    if (sailStationComponent.ship != null && sailStationComponent.ship.stage != EFlybyStage.Idle)
                     {
                         __instance.shipsArr[__instance.shipCount] = sailStationComponent.ship.uiRenderingData;
                         __instance.shipCount++;
